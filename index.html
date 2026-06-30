@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proporcionalidad entre Magnitudes - Retro Arcade Math</title>
+    <style>
+        /* ==========================================
+           1. ESTILOS BASE Y VARIABLES (TEMA RETRO NEÓN)
+           ========================================== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: #050014;
+            color: #ffffff;
+            font-family: 'Courier New', Courier, monospace, sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Efecto scanline retro de fondo */
+        body::before {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 99999;
+            opacity: 0.4;
+            pointer-events: none;
+            background-size: 100% 4px, 6px 100%;
+        }
+
+        /* Contenedor Principal del Juego (Estilo Gabinete Arcade) */
+        .arcade-container {
+            width: 100%;
+            max-width: 850px;
+            min-height: 600px;
+            background: rgba(15, 5, 30, 0.85);
+            border: 4px solid #00ffff;
+            box-shadow: 0 0 20px #00ffff, inset 0 0 15px #8a2be2;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px;
+            position: relative;
+            backdrop-filter: blur(8px);
+            transition: all 0.3s ease;
+        }
+
+        /* Animación de sacudida para errores */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(0px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(2px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(2px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(0deg); }
+        }
+
+        .shake {
+            animation: shake 0.4s;
+            border-color: #ff007f !important;
+            box-shadow: 0 0 30px #ff007f, inset 0 0 20px #ff0000 !important;
+        }
+
+        /* Canvas de efectos visuales flotantes */
+        #fxCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        /* ==========================================
+           2. COMPONENTES DEL HUD (MÉTRICAS DEL JUEGO)
+           ========================================== */
+        .hud-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid #bd00ff;
+            border-radius: 8px;
+            padding: 12px 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 0 10px rgba(189, 0, 255, 0.3);
+        }
+
+        .hud-item {
+            text-align: center;
+            font-weight: bold;
+            font-size: 14pt;
+            text-transform: uppercase;
+        }
+
+        .hud-label {
+            font-size: 9pt;
+            color: #00ffff;
+            text-shadow: 0 0 5px #00ffff;
+            margin-bottom: 4px;
+        }
+
+        .hud-value {
+            color: #ff007f;
+            text-shadow: 0 0 8px #ff007f;
+        }
+
+        .hud-value.green {
+            color: #39ff14;
+            text-shadow: 0 0 8px #39ff14;
+        }
+
+        /* Barra de Progreso Luminosa */
+        .progress-container {
+            width: 100%;
+            height: 14px;
+            background: #1a0b36;
+            border: 1px solid #00ffff;
+            border-radius: 7px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            box-shadow: 0 0 8px rgba(0, 255, 255, 0.2);
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #8a2be2, #00ffff);
+            box-shadow: 0 0 10px #00ffff;
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ==========================================
+           3. DISEÑO DE PANTALLAS Y PANELES
+           ========================================== */
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Pantalla Inicial */
+        .welcome-screen {
+            text-align: center;
+            padding: 40px 10px;
+        }
+
+        .arcade-title {
+            font-size: 28pt;
+            font-weight: 900;
+            color: #ffff00;
+            text-shadow: 0 0 12px #ffff00, 3px 3px 0px #ff007f;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .arcade-subtitle {
+            font-size: 15pt;
+            color: #00ffff;
+            text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
+            margin-bottom: 50px;
+            letter-spacing: 1px;
+        }
+
+        /* Botón Enorme Estilo Retro */
+        .btn-arcade-huge {
+            background: linear-gradient(145deg, #ff007f, #8a2be2);
+            color: #ffffff;
+            font-size: 18pt;
+            font-weight: bold;
+            padding: 20px 50px;
+            border: 3px solid #ffffff;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 0 15px #ff007f, 0 5px 0px #5e0034;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            transition: all 0.1s ease;
+        }
+
+        .btn-arcade-huge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px #ff007f, 0 7px 0px #5e0034;
+        }
+
+        .btn-arcade-huge:active {
+            transform: translateY(5px);
+            box-shadow: 0 0 5px #ff007f, 0 0px 0px #5e0034;
+        }
+
+        /* Botón Estándar Interactivos */
+        .btn-arcade {
+            background: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+            border: 2px solid #bd00ff;
+            padding: 12px 24px;
+            font-size: 12pt;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 5px rgba(189, 0, 255, 0.3);
+            text-transform: uppercase;
+        }
+
+        .btn-arcade:hover {
+            background: #bd00ff;
+            box-shadow: 0 0 15px #bd00ff;
+            transform: scale(1.03);
+        }
+
+        /* Caja de Contenido de Preguntas */
+        .game-panel {
+            background: rgba(255, 255, 255, 0.02);
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 12px rgba(0, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .phase-badge {
+            display: inline-block;
+            background: #ff007f;
+            color: #ffffff;
+            padding: 4px 12px;
+            font-size: 10pt;
+            font-weight: bold;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            text-shadow: 0 0 5px #fff;
+            box-shadow: 0 0 8px #ff007f;
+        }
+
+        .question-text {
+            font-size: 14pt;
+            line-height: 1.6;
+            margin-bottom: 25px;
+            color: #ffffff;
+            text-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
+        }
+
+        /* ==========================================
+           4. FORMATOS DE COMPONENTES INTERACTIVOS
+           ========================================== */
+        
+        /* Opciones Múltiples (Fase 1 y 3) */
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        @media(min-width: 600px) {
+            .options-grid.two-cols {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .option-card {
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #8a2be2;
+            border-radius: 6px;
+            padding: 16px;
+            cursor: pointer;
+            font-size: 12pt;
+            display: flex;
+            align-items: center;
+            transition: all 0.2s ease;
+            box-shadow: inset 0 0 8px rgba(138, 43, 226, 0.2);
+        }
+
+        .option-card:hover {
+            border-color: #00ffff;
+            box-shadow: 0 0 12px rgba(0, 255, 255, 0.5), inset 0 0 8px rgba(0, 255, 255, 0.2);
+            transform: translateX(4px);
+        }
+
+        .option-card::before {
+            content: "➔";
+            margin-right: 12px;
+            color: #ff007f;
+            text-shadow: 0 0 5px #ff007f;
+            font-size: 14pt;
+        }
+
+        /* Selección Múltiple (Fase 2) */
+        .checkbox-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid #8a2be2;
+            border-radius: 6px;
+            padding: 14px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .checkbox-card:hover {
+            border-color: #ff007f;
+            box-shadow: 0 0 10px rgba(255, 0, 127, 0.4);
+        }
+
+        .checkbox-card.selected {
+            border-color: #39ff14;
+            background: rgba(57, 255, 20, 0.05);
+            box-shadow: 0 0 12px rgba(57, 255, 20, 0.3);
+        }
+
+        .checkbox-indicator {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #8a2be2;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12pt;
+            font-weight: bold;
+        }
+
+        .checkbox-card.selected .checkbox-indicator {
+            border-color: #39ff14;
+            color: #39ff14;
+            text-shadow: 0 0 5px #39ff14;
+        }
+
+        /* Completar Campo de Texto (Fase 2) */
+        .input-fill-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .input-fill {
+            background: #000;
+            border: 2px solid #bd00ff;
+            color: #39ff14;
+            font-family: inherit;
+            font-size: 14pt;
+            padding: 12px 20px;
+            border-radius: 6px;
+            text-align: center;
+            outline: none;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 0 10px rgba(189, 0, 255, 0.3);
+        }
+
+        .input-fill:focus {
+            border-color: #00ffff;
+            box-shadow: 0 0 15px #00ffff;
+        }
+
+        /* Estilos de Arrastrar y Soltar (Fase 2) */
+        .drag-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .drag-items-pool {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 15px;
+            border: 1px dashed #8a2be2;
+            border-radius: 6px;
+        }
+
+        .drag-item {
+            background: #110022;
+            border: 2px solid #00ffff;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: grab;
+            font-size: 11pt;
+            box-shadow: 0 0 6px rgba(0, 255, 255, 0.2);
+        }
+
+        .drag-item:active {
+            cursor: grabbing;
+        }
+
+        .drop-zones-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+        }
+
+        .drop-zone {
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px dashed #bd00ff;
+            border-radius: 6px;
+            padding: 15px;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .drop-zone-title {
+            font-size: 10pt;
+            color: #ff007f;
+            text-align: center;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 0, 127, 0.3);
+            padding-bottom: 4px;
+        }
+
+        /* Contenedor de Tablas Matemáticas (Fase 3) */
+        .math-table-container {
+            width: 100%;
+            overflow-x: auto;
+            margin-bottom: 25px;
+            border: 2px solid #8a2be2;
+            border-radius: 6px;
+        }
+
+        .math-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #09001a;
+            text-align: center;
+        }
+
+        .math-table th, .math-table td {
+            border: 1px solid #8a2be2;
+            padding: 12px;
+            font-size: 12pt;
+        }
+
+        .math-table th {
+            background: rgba(138, 43, 226, 0.2);
+            color: #00ffff;
+            text-shadow: 0 0 5px #00ffff;
+        }
+
+        .math-table tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Acción de Envío Centralizado */
+        .action-container {
+            text-align: right;
+            margin-top: 20px;
+        }
+
+        /* ==========================================
+           5. BANNER DE ENHANCEMENTS / BONUS OVERLAY
+           ========================================== */
+        .bonus-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.5);
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid #39ff14;
+            box-shadow: 0 0 30px #39ff14;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            z-index: 500;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .bonus-overlay.active {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+            pointer-events: auto;
+        }
+
+        .bonus-title {
+            font-size: 24pt;
+            color: #39ff14;
+            text-shadow: 0 0 10px #39ff14;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        /* ==========================================
+           6. PANTALLA DE RESULTADOS FINALES
+           ========================================== */
+        .result-screen {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .badge-icon {
+            font-size: 60pt;
+            margin-bottom: 15px;
+            display: inline-block;
+            animation: bounce 2s infinite alternate;
+        }
+
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-10px); }
+        }
+
+        .result-rank {
+            font-size: 20pt;
+            color: #ffff00;
+            text-shadow: 0 0 10px #ffff00;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+        }
+
+        .result-desc {
+            font-size: 12pt;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            color: #e0e0e0;
+        }
+
+        .motivational-box {
+            background: rgba(255, 255, 255, 0.04);
+            border-left: 4px solid #ff007f;
+            padding: 15px;
+            margin: 25px 0;
+            font-style: italic;
+            font-size: 11pt;
+            text-align: left;
+            box-shadow: 0 0 8px rgba(255, 0, 127, 0.2);
+        }
+
+        .stats-summary {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            max-width: 400px;
+            margin: 0 auto 30px auto;
+            font-size: 12pt;
+            text-align: left;
+        }
+
+        .stats-label { color: #00ffff; }
+        .stats-val { text-align: right; font-weight: bold; color: #ff007f; }
+    </style>
+</head>
+<body>
+
+    <!-- Lienzo para explosión de partículas y confeti -->
+    <canvas id="fxCanvas"></canvas>
+
+    <div class="arcade-container" id="gameContainer">
+        
+        <!-- HUD Superior (Visible solo durante la simulación activa del juego) -->
+        <div id="hudPanel" class="hud-panel" style="display: none;">
+            <div class="hud-item">
+                <div class="hud-label">Fase</div>
+                <div id="hudLevel" class="hud-value">1/3</div>
+            </div>
+            <div class="hud-item">
+                <div class="hud-label">Puntaje</div>
+                <div id="hudScore" class="hud-value green">0000</div>
+            </div>
+            <div class="hud-item">
+                <div class="hud-label">Vidas</div>
+                <div id="hudLives" class="hud-value">❤️❤️❤️</div>
+            </div>
+            <div class="hud-item">
+                <div class="hud-label">Tiempo</div>
+                <div id="hudTimer" class="hud-value">30s</div>
+            </div>
+        </div>
+
+        <!-- Barra de Progreso Luminosa de la Fase Actual -->
+        <div id="progressContainer" class="progress-container" style="display: none;">
+            <div id="progressBar" class="progress-bar"></div>
+        </div>
+
+        <!-- ==========================================
+           PANTALLA 1: INICIO / BIENVENIDA
+           ========================================== -->
+        <div id="screenWelcome" class="screen active welcome-screen">
+            <h1 class="arcade-title">Proporcionalidad<br>entre Magnitudes</h1>
+            <p class="arcade-subtitle">¡Acepta el desafío matemático!</p>
+            <button class="btn-arcade-huge" onclick="startGame()">Iniciar Misión</button>
+        </div>
+
+        <!-- ==========================================
+           PANTALLA 2: COMPONENTE DINÁMICO DE PREGUNTAS
+           ========================================== -->
+        <div id="screenGameplay" class="screen">
+            <div class="game-panel">
+                <div id="phaseBadge" class="phase-badge">Fase 1: Explorador</div>
+                <div id="questionText" class="question-text">Cargando el ejercicio interactivo...</div>
+                
+                <!-- Área Dinámica de Entrada de Respuestas -->
+                <div id="interactionArea"></div>
+            </div>
+
+            <!-- Acciones de Validación / Progreso -->
+            <div class="action-container">
+                <button id="btnSubmit" class="btn-arcade" style="display: none;" onclick="evaluateStructuredAnswer()">Verificar Respuesta</button>
+            </div>
+        </div>
+
+        <!-- ==========================================
+           PANTALLA 3: RESULTADOS FINALES Y RECOMPENSAS
+           ========================================== -->
+        <div id="screenResults" class="screen result-screen">
+            <div id="resultBadge" class="badge-icon">🏆</div>
+            <h2 id="resultRank" class="result-rank">Maestro de la Proporcionalidad</h2>
+            <p id="resultDesc" class="result-desc">¡Excelente juego! Has resuelto con precisión científica cada enigma propuesto.</p>
+            
+            <div class="stats-summary">
+                <span class="stats-label">Puntaje Total:</span>
+                <span id="statScore" class="stats-val">0</span>
+                <span class="stats-label">Aciertos Totales:</span>
+                <span id="statCorrect" class="stats-val">0/0</span>
+            </div>
+
+            <div id="motivationalMessage" class="motivational-box">
+                "La práctica hace al maestro."
+            </div>
+
+            <button class="btn-arcade-huge" style="margin-top: 15px;" onclick="restartGame()">Reiniciar Misión</button>
+        </div>
+
+        <!-- Panel de Superposición para Alertas de Bonus Activos -->
+        <div id="bonusOverlay" class="bonus-overlay">
+            <h3 class="bonus-title">¡BONUS ACTIVADO!</h3>
+            <p id="bonusText" style="font-size: 13pt; color: #fff; font-weight: bold;"></p>
+        </div>
+
+    </div>
+
+    <!-- ==========================================
+       LÓGICA DEL JUEGO Y REGLAS DE NEGOCIO (JAVASCRIPT)
+       ========================================== -->
+    <script>
+        /* ==========================================
+           A. POOL COMPLETO DE PREGUNTAS REQUERIDAS (90 ÍTEMS)
+           ========================================== */
+
+        // FASE 1: 30 Preguntas de Selección Única Básica
+        const poolFase1 = [
+            { t: "Si compras más cuadernos idénticos, el dinero total pagado es...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 0 },
+            { t: "La velocidad de un automóvil y el tiempo que tarda en recorrer una distancia fija es...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 1 },
+            { t: "La edad de una persona y su estatura en centímetros durante toda su vida es...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 2 },
+            { t: "Si duplicas la cantidad de obreros idénticos, el tiempo para terminar la misma obra...", o: ["Se duplica también", "Se reduce a la mitad", "No cambia en absoluto"], c: 1 },
+            { t: "A mayor número de hojas de un libro, su peso total es...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 0 },
+            { t: "La talla del calzado de un niño y su nota final en el examen de Matemática son...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 2 },
+            { t: "Si un grifo arroja más litros de agua por minuto, el tiempo para llenar un tanque es...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 1 },
+            { t: "La cantidad de alimento disponible y los días que dura si se mantiene la misma ración por animal es...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 1 },
+            { t: "El número de pasajeros en un autobús urbano y la velocidad de circulación de la unidad es...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 2 },
+            { t: "Si compras menos kilogramos de arroz, el dinero requerido para la compra es...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 0 },
+            { t: "El tiempo empleado por un pintor y los metros cuadrados de pared pintada uniformemente son...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 0 },
+            { t: "El número de horas diarias que se deja encendida una bombilla y el consumo eléctrico son...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 0 },
+            { t: "El grosor de un libro y el precio de venta en librerías de géneros diferentes son...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 2 },
+            { t: "La cantidad de líneas telefónicas idénticas atendidas y el personal de soporte necesario son...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 0 },
+            { t: "La velocidad con la que corre un atleta y el tiempo en completar una pista de 400 metros son...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 1 },
+            { t: "El número de vacas de una granja y el tiempo que tardarán en consumir un depósito fijo de pasto son...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 1 },
+            { t: "El precio de una entrada al cine y la fila de asiento que te corresponde en la sala son...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 2 },
+            { t: "Más horas dedicadas al estudio concentrado y el número de ejercicios resueltos correctamente son...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 0 },
+            { t: "La cantidad de grifos iguales abiertos en una piscina y el tiempo de llenado total son...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 1 },
+            { t: "El número de porciones de pizza consumidas por una persona y el hambre que le queda son...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 2 },
+            { t: "Los metros de tela comprados y el costo total de la compra en una tienda textil son...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 0 },
+            { t: "El número de personas cocinando en paralelo una misma receta exacta y el sabor final del plato son...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 2 },
+            { t: "Menor velocidad en una bicicleta implica que para cubrir la distancia entre dos pueblos se requiere...", o: ["Más tiempo", "Menos tiempo", "La misma cantidad de tiempo"], c: 0 },
+            { t: "El número de gallinas en un corral y la producción diaria de huevos de la granja son...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 0 },
+            { t: "Los kilómetros recorridos por un camión y el combustible consumido a ritmo constante son...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 0 },
+            { t: "El peso de un cargamento de ladrillos y el número de viajes necesarios de un camión pequeño son...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 0 },
+            { t: "El número de llaves de agua abiertas del mismo diámetro y el tiempo invertido en vaciar un depósito de agua son...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 1 },
+            { t: "El color de la camiseta de un deportista y la distancia que logra recorrer en una maratón son...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 2 },
+            { t: "La cantidad de fotocopias idénticas impresas y el tiempo que la máquina opera continuamente son...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 0 },
+            { t: "El número de rebanadas en que se divide un pastel y el tamaño de cada porción individual son...", o: ["Directamente proporcional", "Inversamente proporcional", "No proporcional"], c: 1 }
+        ];
+
+        // FASE 2: Tipo Completar Palabra (15 Ítems)
+        const poolFase2Completar = [
+            { t: "Si aumenta una magnitud y también aumenta la otra en la misma proporción, entonces son ______________ proporcionales.", r: "directamente" },
+            { t: "Si aumenta una magnitud y la otra disminuye en la misma proporción, entonces son ______________ proporcionales.", r: "inversamente" },
+            { t: "Cuando no existe ninguna relación matemática constante entre dos variables, decimos que es una situación ____ proporcional.", r: "no" },
+            { t: "En la proporcionalidad directa, el ______________ entre las dos magnitudes siempre es constante.", r: "cociente" },
+            { t: "En la proporcionalidad inversa, el ______________ de las dos magnitudes correspondientes permanece constante.", r: "producto" },
+            { t: "Si tres camiones transportan carga, al duplicar los camiones se necesitarán ______________ viajes para mover el mismo inventario.", r: "menos" },
+            { t: "Si el precio unitario es fijo, al comprar el triple de productos gastaremos el ______________ de dinero.", r: "triple" },
+            { t: "El factor constante que relaciona dos magnitudes proporcionales se denomina constante de ______________.", r: "proporcionalidad" },
+            { t: "Al reducir a la mitad el número de trabajadores en una obra, los días de labor requeridos se van al ______________.", r: "doble" },
+            { t: "La relación entre la velocidad de un tren y el tiempo que tarda en llegar a su destino es de tipo ______________.", r: "inversa" },
+            { t: "La relación entre los kilogramos de fruta comprados y el costo total es de tipo ______________.", r: "directa" },
+            { t: "La edad de un árbol y su número exacto de ramas representan una relación ______________ proporcional.", r: "no" },
+            { t: "Si para tejer una manta se usan 3 ovillos, para tejer 6 mantas iguales se requerirán ______________ ovillos.", r: "más" },
+            { t: "Cuando dos magnitudes disminuyen juntas manteniendo su razón, la proporción es ______________.", r: "directa" },
+            { t: "Si una magnitud se multiplica por 4 y la otra se divide entre 4, hablamos de proporcionalidad ______________.", r: "inversa" }
+        ];
+
+        // FASE 2: Tipo Selección Múltiple Casillas (15 Ítems)
+        const poolFase2Multi = [
+            { t: "Marca TODAS las situaciones que representen proporcionalidad DIRECTA:", o: ["Más kilos de harina ➔ más pan producido", "Más velocidad del auto ➔ menos tiempo de viaje", "Más camisas idénticas compradas ➔ más pago total", "Edad de una madre y peso del bebé"], c: [0, 2] },
+            { t: "Marca TODAS las situaciones que correspondan a proporcionalidad INVERSA:", o: ["Más albañiles trabajando ➔ menos días de obra", "Más cuadernos ➔ más costo", "Más velocidad de llenado del grifo ➔ menos minutos totales", "Estatura de un alumno y su promedio escolar"], c: [0, 2] },
+            { t: "Marca TODAS las opciones donde NO exista proporcionalidad:", o: ["Temperatura ambiente diario y número de calzado", "Cantidad de juguetes iguales comprados y costo", "Horas de juego de consola y nivel de batería", "Edad de una persona y cantidad de libros leídos"], c: [0, 3] },
+            { t: "Identifica relaciones DIRECTAMENTE proporcionales:", o: ["Litros de gasolina usados y kilómetros recorridos", "Trabajadores contratados y horas de entrega", "Monedas de S/5 acumuladas y valor monetario total", "Grosor del cabello y agilidad física"], c: [0, 2] },
+            { t: "Identifica relaciones INVERSAMENTE proporcionales:", o: ["Raciones diarias de comida y cantidad de mascotas alimentadas", "Metros de valla instalada y presupuesto gastado", "Velocidad constante del viento y tiempo de vuelo de un velero", "Talla de pantalón y memoria visual"], c: [0, 2] },
+            { t: "Selecciona las opciones que NO presentan proporcionalidad constante:", o: ["Calificación en Historia y peso corporal", "Minutos de llamada telefónica libre y costo por minuto fijo", "Distancia al sol de un planeta y su color superficial", "Número de hojas impresas y tinta consumida"], c: [0, 2] },
+            { t: "Selecciona casos de proporcionalidad DIRECTA en la vida cotidiana:", o: ["Tiempo de carga de un celular y porcentaje de batería", "Número de obreros pavimentando y días faltantes", "Metros de cable eléctrico cortado y peso del rollo", "Velocidad de caminata y energía gastada"], c: [0, 2] },
+            { t: "Selecciona casos de proporcionalidad INVERSA en el campo productivo:", o: ["Máquinas trabajando al mismo ritmo y horas para terminar pedidos", "Cantidad de abono y altura final de la planta", "Número de repartidores a domicilio y tiempo medio de entrega", "Precio unitario y demanda en productos de lujo"], c: [0, 2] },
+            { t: "Marca las relaciones absurdas (NO proporcionales):", o: ["Número de mascotas en casa y tu coeficiente intelectual", "Cantidad de agua consumida por mes y tarifa básica por litro", "Color de ojos de un estudiante y su habilidad para dibujar", "Consumo de combustible por hora fija"], c: [0, 2] },
+            { t: "Marca ejemplos con proporcionalidad DIRECTA verificada:", o: ["Paquetes de galletas y calorías totales consumidas", "Campesinos cosechando y tiempo total de recolección", "Líneas de texto escritas y cantidad de tinta de bolígrafo usada", "Presión del aire y felicidad"], c: [0, 2] },
+            { t: "Marca ejemplos con proporcionalidad INVERSA verificada:", o: ["Velocidad de descarga de internet y segundos en bajar un video", "Grosor de una tubería y caudal de agua transportado", "Número de personas repartiendo volantes y tiempo de distribución", "Páginas leídas de un libro y páginas restantes"], c: [0, 2] },
+            { t: "Elige las parejas de variables que NO posean proporcionalidad:", o: ["Cantidad de lluvia mensual y precio del dólar", "Kilogramos de carne y porciones de estofado", "Número de lista escolar y peso en kilogramos", "Tiempo de viaje a velocidad constante"], c: [0, 3] },
+            { t: "Selecciona magnitudes con proporción DIRECTA:", o: ["Cantidad de entradas vendidas y recaudación de un teatro", "Número de comensales y comida sobrante", "Metros cuadrados de alfombra y precio pagado", "Horas de sueño y edad del individuo"], c: [0, 2] },
+            { t: "Selecciona magnitudes con proporción INVERSA:", o: ["Número de excavadoras idénticas y horas para cavar una zanja", "Longitud de un paso y pasos para recorrer una cuadra", "Precio del boleto de tren y velocidad del tren", "Cantidad de luz solar y crecimiento de plantas de sombra"], c: [0, 1] },
+            { t: "Marca las alternativas de la lista que NO tienen proporcionalidad:", o: ["Dígitos de tu número telefónico y tu edad", "Consumo de gasolina de un coche estacionado", "Puntaje en un juego y cantidad de parpadeos por minuto", "Kilogramos de alimento para pollos y costo de adquisición"], c: [0, 2] }
+        ];
+
+        // FASE 3: Problemas Matemáticos Aplicados (15 Ítems)
+        const poolFase3Problemas = [
+            { t: "Si 4 cuadernos del mismo tipo cuestan S/20. ¿Cuánto costarán 10 cuadernos?", o: ["S/40", "S/50", "S/60", "S/80"], c: 1 },
+            { t: "8 obreros hacen una obra en 12 días. Si trabajan 16 obreros al mismo ritmo, ¿cuántos días tardarán?", o: ["24 días", "6 días", "12 días", "8 días"], c: 1 },
+            { t: "Un auto recorre 180 km en 3 horas a velocidad constante. ¿Cuántos km recorrerá en 5 horas?", o: ["300 km", "240 km", "200 km", "350 km"], c: 0 },
+            { t: "Un depósito de agua se llena en 6 horas usando 4 grifos iguales. ¿Cuánto tardará en llenarse con 8 grifos?", o: ["12 horas", "3 horas", "2 horas", "4 horas"], c: 1 },
+            { t: "Para alimentar a 5 perros se necesitan 15 kg de comida al mes. ¿Cuántos kg se necesitan para 12 perros?", o: ["30 kg", "36 kg", "40 kg", "24 kg"], c: 1 },
+            { t: "Un grupo de 6 montañistas tiene provisiones para 10 días. Si se unen 4 personas más, ¿para cuántos días alcanzarán?", o: ["15 días", "6 días", "5 días", "8 días"], c: 1 },
+            { t: "Un tren recorre una distancia a 80 km/h en 3 horas. Si aumenta su velocidad a 120 km/h, ¿cuánto tardará?", o: ["2 horas", "4.5 horas", "1.5 horas", "2.5 horas"], c: 0 },
+            { t: "Si 3 fotocopias cuestan S/0.60, ¿cuánto dinero se pagará por la impresión de 15 fotocopias?", o: ["S/2.00", "S/3.00", "S/2.50", "S/1.50"], c: 1 },
+            { t: "Una cuadrilla de 10 tejedores fabrica 50 chompas. ¿Cuántas chompas fabricarán 15 tejedores?", o: ["65 chompas", "75 chompas", "100 chompas", "80 chompas"], c: 1 },
+            { t: "Un ganadero tiene pasto para alimentar 20 vacas durante 30 días. Si vende 5 vacas, ¿cuánto durará el pasto?", o: ["40 días", "25 días", "35 días", "22 días"], c: 0 },
+            { t: "Si 5 entradas al parque de diversiones cuestan S/75, ¿cuánto costarán 8 entradas?", o: ["S/100", "S/120", "S/110", "S/130"], c: 1 },
+            { t: "Cinco grifos tardan 18 minutos en vaciar un tanque. ¿Cuántos minutos tardarán 9 grifos idénticos?", o: ["10 minutos", "8 minutos", "12 minutos", "15 minutos"], c: 0 },
+            { t: "Un camión consume 12 galones de diésel cada 120 km. ¿Cuántos galones gastará en un viaje de 300 km?", o: ["24 galones", "30 galones", "28 galones", "35 galones"], c: 1 },
+            { t: "Para pintar una pared se usaron 4 galones de pintura cubriendo 24 m². ¿Cuántos galones se requieren para 42 m²?", o: ["6 galones", "7 galones", "8 galones", "9 galones"], c: 1 },
+            { t: "Si 2 camiones idénticos hacen 6 viajes diarios para retirar escombros, ¿cuántos viajes harán 5 camiones?", o: ["12 viajes", "15 viajes", "10 viajes", "18 viajes"], c: 1 }
+        ];
+
+        // FASE 3: Análisis de Tablas Numéricas (15 Ítems)
+        const poolFase3Tablas = [
+            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [2, 4, 6]<br>Y: [10, 20, 30]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 0 },
+            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [2, 4, 8]<br>Y: [20, 10, 5]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 1 },
+            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [1, 2, 3]<br>Y: [5, 6, 7]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 2 },
+            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [3, 6, 9]<br>Y: [12, 24, 36]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 0 },
+            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [5, 10, 15]<br>Y: [60, 30, 20]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 1 },
+            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [2, 3, 4]<br>Y: [4, 9, 16]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 2 },
+            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [10, 20, 50]<br>Y: [2, 4, 10]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 0 },
+            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [4, 6, 12]<br>Y: [9, 6, 3]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 1 },
+            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [0, 5, 10]<br>Y: [10, 15, 20]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 2 },
+            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [7, 14, 21]<br>Y: [1, 2, 3]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 0 },
+            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [1, 3, 9]<br>Y: [27, 9, 3]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 1 },
+            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [2, 4, 6]<br>Y: [100, 50, 25]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 2 },
+            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [0.5, 1, 2]<br>Y: [4, 8, 16]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 0 },
+            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [10, 5, 2]<br>Y: [4, 8, 20]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 1 },
+            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [5, 6, 7]<br>Y: [25, 30, 36]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 2 }
+        ];
+
+        // Frases Motivacionales para la pantalla final (20 Diferentes)
+        const frasesMotivacionales = [
+            "La práctica hace al maestro.",
+            "Los errores son oportunidades para aprender.",
+            "Cada problema resuelto fortalece tu mente.",
+            "Las matemáticas entrenan tu inteligencia.",
+            "El conocimiento crece con cada intento.",
+            "¡Tu potencial matemático es ilimitado!",
+            "El éxito es la suma de pequeños esfuerzos diarios.",
+            "¡Cada nivel superado demuestra tu gran talento!",
+            "Nunca dejes de explorar, calcular y aprender.",
+            "Las mentes brillantes se construyen con constancia.",
+            "¡El razonamiento numérico es tu superpoder!",
+            "Aprender matemáticas te abre las puertas del futuro.",
+            "¡Gran concentración! Sigue desafiando tus límites.",
+            "Cada acierto es el reflejo de tu dedicación activa.",
+            "Dominar las proporciones te ayuda a entender el universo.",
+            "¡Los números son divertidos cuando juegas con lógica!",
+            "Sigue intentándolo, tu cerebro se hace más fuerte.",
+            "¡Excelente perseverancia, eres un gran estudiante!",
+            "La matemática es la música de la razón.",
+            "¡Continúa con esa increíble energía científica!"
+        ];
+
+
+        /* ==========================================
+           B. CONFIGURACIÓN DEL MOTOR DE AUDIO (WEB AUDIO API)
+           ========================================== */
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSynthSound(type) {
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'correct') {
+                    // Arpegio ascendente brillante rápido
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+                    osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+                    osc.frequency.setValueAtTime(1046.50, now + 0.24); // C6
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                    osc.start(now);
+                    osc.stop(now + 0.4);
+                } else if (type === 'incorrect') {
+                    // Barrido descendente grave distorsionado
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.linearRampToValueAtTime(60, now + 0.35);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } else if (type === 'levelup') {
+                    // Melodía triunfal heroica de videojuego
+                    osc.type = 'square';
+                    const notes = [587.33, 659.25, 698.46, 880.00, 987.77, 1046.50];
+                    notes.forEach((freq, idx) => {
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+                    });
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+                } else if (type === 'victory') {
+                    // Fanfarria prolongada de acorde mayor
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.setValueAtTime(659.25, now + 0.15);
+                    osc.frequency.setValueAtTime(783.99, now + 0.3);
+                    osc.frequency.setValueAtTime(1046.50, now + 0.45);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 1.2);
+                    osc.start(now);
+                    osc.stop(now + 1.2);
+                } else if (type === 'defeat') {
+                    // Melodía triste descendente apocalíptica
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(311.13, now); // Eb4
+                    osc.frequency.setValueAtTime(293.66, now + 0.2); // D4
+                    osc.frequency.setValueAtTime(261.63, now + 0.4); // C4
+                    osc.frequency.setValueAtTime(196.00, now + 0.6); // G3
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 1.0);
+                    osc.start(now);
+                    osc.stop(now + 1.0);
+                }
+            } catch (e) {
+                console.log("AudioContext inicializado tras interacción de usuario.");
+            }
+        }
+
+
+        /* ==========================================
+           C. SISTEMA DE PARTÍCULAS Y ANIMACIONES (CANVAS)
+           ========================================== */
+        const canvas = document.getElementById('fxCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor(x, y, color, type = 'normal') {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.type = type;
+                this.size = Math.random() * 5 + 3;
+                this.speedX = (Math.random() - 0.5) * 8;
+                this.speedY = (Math.random() - 0.5) * 8 - (type === 'confetti' ? 4 : 0);
+                this.gravity = type === 'confetti' ? 0.15 : 0;
+                this.alpha = 1;
+                this.decay = Math.random() * 0.02 + 0.015;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.speedY += this.gravity;
+                this.alpha -= this.decay;
+            }
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
+                ctx.beginPath();
+                if (this.type === 'confetti') {
+                    ctx.fillRect(this.x, this.y, this.size, this.size * 1.5);
+                } else {
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        function createExplosion(color) {
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            for (let i = 0; i < 40; i++) {
+                particles.push(new Particle(centerX, centerY, color, 'normal'));
+            }
+        }
+
+        function triggerConfetti() {
+            for (let i = 0; i < 120; i++) {
+                const randomX = Math.random() * window.innerWidth;
+                const bottomY = window.innerHeight + 20;
+                const colors = ['#00ffff', '#ff007f', '#39ff14', '#ffff00', '#bd00ff'];
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                particles.push(new Particle(randomX, bottomY - Math.random() * 100, randomColor, 'confetti'));
+            }
+        }
+
+        function animationLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                if (particles[i].alpha <= 0) {
+                    particles.splice(i, 1);
+                } else {
+                    particles[i].draw();
+                }
+            }
+            requestAnimationFrame(animationLoop);
+        }
+        animationLoop();
+
+
+        /* ==========================================
+           D. ESTADO DEL JUEGO Y FLUJO DE LOGICA INTERNA
+           ========================================== */
+        let gameState = {
+            phase: 1,           // Fase Actual (1, 2, 3)
+            currentStep: 0,     // Índice interno de ejercicio en la fase actual
+            totalSteps: 5,      // Ejercicios requeridos por cada fase singular
+            score: 0,           // Puntos acumulados
+            lives: 3,           // Vidas restantes
+            timeLeft: 30,       // Segundos restantes en el temporizador
+            timerInterval: null,// Manejador del ciclo de tiempo
+            correctInARow: 0,   // Contador interno de aciertos para disparar Bonus
+            totalAnswersCorrect: 0,
+            totalQuestionsAsked: 0,
+            activeQuestion: null // Almacena la estructura completa del problema actual
+        };
+
+        // Instancias temporales barajadas para la partida activa
+        let listFase1 = [];
+        let listFase2 = [];
+        let listFase3 = [];
+
+        // Utilidad: Mezclador Fisher-Yates para aleatorización pura de arreglos
+        function shuffleArray(arr) {
+            let current = arr.length, random;
+            while (current !== 0) {
+                random = Math.floor(Math.random() * current);
+                current--;
+                [arr[current], arr[random]] = [arr[random], arr[current]];
+            }
+            return arr;
+        }
+
+        // Activación del juego inicial
+        function startGame() {
+            // Asegurar activación del contexto de audio por políticas modernas de navegadores
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            // Reinicializar estados base
+            gameState.phase = 1;
+            gameState.currentStep = 0;
+            gameState.score = 0;
+            gameState.lives = 3;
+            gameState.correctInARow = 0;
+            gameState.totalAnswersCorrect = 0;
+            gameState.totalQuestionsAsked = 0;
+
+            // Barajar dinámicamente todos los pools de forma independiente cada vez
+            listFase1 = shuffleArray([...poolFase1]);
+            
+            // Fase 2 mezcla tipos diferentes de manera aleatoria
+            let f2Mix = [];
+            poolFase2Completar.forEach(item => f2Mix.push({ type: 'fill', data: item }));
+            poolFase2Multi.forEach(item => f2Mix.push({ type: 'multi', data: item }));
+            listFase2 = shuffleArray(f2Mix);
+
+            // Fase 3 mezcla problemas y tablas
+            let f3Mix = [];
+            poolFase3Problemas.forEach(item => f3Mix.push({ type: 'problem', data: item }));
+            poolFase3Tablas.forEach(item => f3Mix.push({ type: 'table', data: item }));
+            listFase3 = shuffleArray(f3Mix);
+
+            // Transición estética visual de pantallas
+            document.getElementById('screenWelcome').classList.remove('active');
+            document.getElementById('screenResults').classList.remove('active');
+            document.getElementById('screenGameplay').classList.add('active');
+            
+            // Mostrar HUD completo
+            document.getElementById('hudPanel').style.display = 'grid';
+            document.getElementById('progressContainer').style.display = 'block';
+
+            updateHUD();
+            loadNextQuestion();
+        }
+
+        // Actualizar visualmente los marcadores e interfaces del HUD
+        function updateHUD() {
+            document.getElementById('hudLevel').innerText = `${gameState.phase}/3`;
+            document.getElementById('hudScore').innerText = String(gameState.score).padStart(4, '0');
+            document.getElementById('hudLives').innerText = '❤️'.repeat(gameState.lives) + '🖤'.repeat(3 - gameState.lives);
+            document.getElementById('hudTimer').innerText = `${gameState.timeLeft}s`;
+
+            // Calcular barra de progreso global unificada
+            let percentage = (gameState.currentStep / gameState.totalSteps) * 100;
+            document.getElementById('progressBar').style.width = `${percentage}%`;
+        }
+
+        // Sistema centralizado de control de tiempo decreciente
+        function startTimer() {
+            clearInterval(gameState.timerInterval);
+            // Ajuste dinámico de dificultad del tiempo según la fase activa
+            if (gameState.phase === 1) gameState.timeLeft = 35;
+            else if (gameState.phase === 2) gameState.timeLeft = 45;
+            else gameState.timeLeft = 60;
+
+            document.getElementById('hudTimer').innerText = `${gameState.timeLeft}s`;
+
+            gameState.timerInterval = setInterval(() => {
+                gameState.timeLeft--;
+                document.getElementById('hudTimer').innerText = `${gameState.timeLeft}s`;
+
+                if (gameState.timeLeft <= 0) {
+                    clearInterval(gameState.timerInterval);
+                    processWrongAnswer(true); // Fallo directo por tiempo agotado
+                }
+            }, 1000);
+        }
+
+        /* ==========================================
+           E. INYECTOR Y RENDERIZADOR COMPLETO DE PREGUNTAS
+           ========================================== */
+        function loadNextQuestion() {
+            // Validar si la fase actual ha sido completada con éxito
+            if (gameState.currentStep >= gameState.totalSteps) {
+                advancePhase();
+                return;
+            }
+
+            const area = document.getElementById('interactionArea');
+            area.innerHTML = ''; // Limpieza total de controles previos
+            document.getElementById('btnSubmit').style.display = 'none';
+
+            let qText = '';
+            let badgeText = '';
+
+            // ENRUTADOR SEGÚN FASE ACTIVA
+            if (gameState.phase === 1) {
+                badgeText = "Fase 1: Explorador (Fácil)";
+                let qData = listFase1[gameState.currentStep];
+                gameState.activeQuestion = { type: 'choice', raw: qData };
+                
+                qText = qData.t;
+
+                // Crear opciones mezclando índice de respuestas de manera segura
+                let indices = [0, 1, 2];
+                // Para fase 1 mantendremos el orden estándar para no desconfigurar Directa/Inversa/No proporcional
+                let html = `<div class="options-grid">`;
+                indices.forEach(idx => {
+                    html += `<div class="option-card" onclick="submitChoiceAnswer(${idx})">${qData.o[idx]}</div>`;
+                });
+                html += `</div>`;
+                area.innerHTML = html;
+
+            } else if (gameState.phase === 2) {
+                badgeText = "Fase 2: Detective Matemático (Medio)";
+                let stepData = listFase2[gameState.currentStep];
+                
+                if (stepData.type === 'fill') {
+                    gameState.activeQuestion = { type: 'fill', raw: stepData.data };
+                    qText = stepData.data.t;
+                    area.innerHTML = `
+                        <div class="input-fill-container">
+                            <input type="text" id="fillInput" class="input-fill" placeholder="Escribe tu respuesta aquí..." autocomplete="off">
+                        </div>
+                    `;
+                    document.getElementById('btnSubmit').style.display = 'inline-block';
+                } else if (stepData.type === 'multi') {
+                    gameState.activeQuestion = { type: 'multi', raw: stepData.data, selected: [] };
+                    qText = stepData.data.t;
+
+                    let html = `<div style="margin-bottom:15px; font-size:10pt; color:#00ffff;">Selecciona una o más casillas y verifica:</div>`;
+                    stepData.data.o.forEach((opt, idx) => {
+                        html += `
+                            <div class="checkbox-card" id="chk_${idx}" onclick="toggleCheckbox(${idx})">
+                                <div class="checkbox-indicator"></div>
+                                <div>${opt}</div>
+                            </div>
+                        `;
+                    });
+                    area.innerHTML = html;
+                    document.getElementById('btnSubmit').style.display = 'inline-block';
+                }
+
+            } else if (gameState.phase === 3) {
+                badgeText = "Fase 3: Maestro de la Proporcionalidad (Difícil)";
+                let stepData = listFase3[gameState.currentStep];
+
+                if (stepData.type === 'problem') {
+                    gameState.activeQuestion = { type: 'problem', raw: stepData.data };
+                    qText = stepData.data.t;
+
+                    // Barajar opciones del problema para simular juego interactivo retro
+                    let optionsWithIndices = stepData.data.o.map((opt, idx) => ({ text: opt, originalIndex: idx }));
+                    shuffleArray(optionsWithIndices);
+
+                    let html = `<div class="options-grid two-cols">`;
+                    optionsWithIndices.forEach(item => {
+                        html += `<div class="option-card" onclick="submitProblemAnswer(${item.originalIndex})">${item.text}</div>`;
+                    });
+                    html += `</div>`;
+                    area.innerHTML = html;
+
+                } else if (stepData.type === 'table') {
+                    gameState.activeQuestion = { type: 'table', raw: stepData.data };
+                    qText = stepData.data.t;
+
+                    let html = `<div class="options-grid">`;
+                    stepData.data.o.forEach((opt, idx) => {
+                        html += `<div class="option-card" onclick="submitTableAnswer(${idx})">${opt}</div>`;
+                    });
+                    html += `</div>`;
+                    area.innerHTML = html;
+                }
+            }
+
+            document.getElementById('phaseBadge').innerText = badgeText;
+            document.getElementById('questionText').innerHTML = qText;
+            
+            updateHUD();
+            startTimer();
+        }
+
+        /* ==========================================
+           F. MANEJADORES DE ENTRADAS DE USUARIOS
+           ========================================== */
+        
+        // Fase 1: Selección Única Directa
+        function submitChoiceAnswer(selectedIndex) {
+            clearInterval(gameState.timerInterval);
+            if (selectedIndex === gameState.activeQuestion.raw.c) {
+                processCorrectAnswer();
+            } else {
+                processWrongAnswer();
+            }
+        }
+
+        // Fase 2: Toggle de Selección Múltiple
+        function toggleCheckbox(idx) {
+            let q = gameState.activeQuestion;
+            let indexLocation = q.selected.indexOf(idx);
+            let card = document.getElementById(`chk_${idx}`);
+
+            if (indexLocation > -1) {
+                q.selected.splice(indexLocation, 1);
+                card.classList.remove('selected');
+                card.querySelector('.checkbox-indicator').innerText = '';
+            } else {
+                q.selected.push(idx);
+                card.classList.add('selected');
+                card.querySelector('.checkbox-indicator').innerText = '✔';
+            }
+        }
+
+        // Fase 3: Problemas de Selección Única
+        function submitProblemAnswer(originalIndex) {
+            clearInterval(gameState.timerInterval);
+            if (originalIndex === gameState.activeQuestion.raw.c) {
+                processCorrectAnswer();
+            } else {
+                processWrongAnswer();
+            }
+        }
+
+        // Fase 3: Selección analítica de tablas
+        function submitTableAnswer(selectedIndex) {
+            clearInterval(gameState.timerInterval);
+            if (selectedIndex === gameState.activeQuestion.raw.c) {
+                processCorrectAnswer();
+            } else {
+                processWrongAnswer();
+            }
+        }
+
+        // Evaluador centralizado para preguntas complejas estructuradas con botón Enviar
+        function evaluateStructuredAnswer() {
+            clearInterval(gameState.timerInterval);
+            let q = gameState.activeQuestion;
+
+            if (q.type === 'fill') {
+                let userVal = document.getElementById('fillInput').value.trim().toLowerCase();
+                let correctVal = q.raw.r.toLowerCase();
+                
+                if (userVal === correctVal) {
+                    processCorrectAnswer();
+                } else {
+                    processWrongAnswer();
+                }
+            } else if (q.type === 'multi') {
+                let userAnswers = [...q.selected].sort();
+                let correctAnswers = [...q.raw.c].sort();
+
+                if (JSON.stringify(userAnswers) === JSON.stringify(correctAnswers)) {
+                    processCorrectAnswer();
+                } else {
+                    processWrongAnswer();
+                }
+            }
+        }
+
+        /* ==========================================
+           G. PROCESAMIENTO DE ACIERTOS / ERRORES / BONUS
+           ========================================== */
+        
+        function processCorrectAnswer() {
+            gameState.totalQuestionsAsked++;
+            gameState.totalAnswersCorrect++;
+            gameState.score += 10;
+            gameState.correctInARow++;
+            gameState.currentStep++;
+
+            playSynthSound('correct');
+            createExplosion('#39ff14'); // Destello verde neón
+
+            // Sistema Avanzado de Recompensas por Racha (Cada 3 Correctas consecutivas)
+            if (gameState.correctInARow >= 3) {
+                gameState.correctInARow = 0; // reset racha
+                triggerRandomBonus();
+            } else {
+                proceedFlow();
+            }
+        }
+
+        function processWrongAnswer(isTimeout = false) {
+            gameState.totalQuestionsAsked++;
+            gameState.correctInARow = 0; // Quiebre inmediato de racha activa
+            gameState.lives--;
+
+            playSynthSound('incorrect');
+            
+            // Feedback háptico visual (Sacudida arcade del contenedor en rojo neón)
+            const el = document.getElementById('gameContainer');
+            el.classList.add('shake');
+            setTimeout(() => el.classList.remove('shake'), 400);
+
+            if (gameState.lives <= 0) {
+                endGame(false); // Fin de la simulación por derrota total
+            } else {
+                gameState.currentStep++; // Avanzar el paso a pesar del error
+                proceedFlow();
+            }
+        }
+
+        function proceedFlow() {
+            updateHUD();
+            setTimeout(() => {
+                loadNextQuestion();
+            }, 600);
+        }
+
+        // Despliegue de Bonus Aleatorios Interactivos
+        function triggerRandomBonus() {
+            const bonuses = ['double', 'life', 'time'];
+            const chosen = bonuses[Math.floor(Math.random() * bonuses.length)];
+            let message = "";
+
+            if (chosen === 'double') {
+                gameState.score += 20; // Otorgar instantáneamente el doble de la recompensa
+                message = "¡Doble Puntaje obtenido (+20 pts)!";
+                createExplosion('#ffff00');
+            } else if (chosen === 'life') {
+                if (gameState.lives < 3) {
+                    gameState.lives++;
+                    message = "¡Estructura reparada! Recuperas una Vida Extra.";
+                } else {
+                    gameState.score += 10;
+                    message = "¡Vidas al Máximo! Bonus convertido en +10 puntos.";
+                }
+                createExplosion('#ff007f');
+            } else if (chosen === 'time') {
+                gameState.timeLeft += 15; // Inyección de tiempo en el reloj
+                message = "¡Inyección Temporal Realizada (+15 segundos)!";
+                createExplosion('#00ffff');
+            }
+
+            // Desplegar banner flotante estético
+            const overlay = document.getElementById('bonusOverlay');
+            document.getElementById('bonusText').innerText = message;
+            overlay.classList.add('active');
+
+            setTimeout(() => {
+                overlay.classList.remove('active');
+                proceedFlow();
+            }, 1800);
+        }
+
+        /* ==========================================
+           H. AVANCE DE FASES Y PANTALLA FINAL
+           ========================================== */
+        function advancePhase() {
+            if (gameState.phase < 3) {
+                gameState.phase++;
+                gameState.currentStep = 0;
+                playSynthSound('levelup');
+                
+                // Efecto masivo de celebración intermedia de fase
+                triggerConfetti();
+                
+                // Carga suave e inmediata de la nueva fase configurada
+                loadNextQuestion();
+            } else {
+                endGame(true); // Superación absoluta del juego entero
+            }
+        }
+
+        function endGame(isVictory) {
+            clearInterval(gameState.timerInterval);
+            
+            document.getElementById('screenGameplay').classList.remove('active');
+            document.getElementById('screenResults').classList.add('active');
+            
+            // Ocultar HUD durante el despliegue de resultados globales
+            document.getElementById('hudPanel').style.display = 'none';
+            document.getElementById('progressContainer').style.display = 'none';
+
+            // Cálculos porcentuales precisos basados en el rendimiento real del alumno
+            let totalPossible = gameState.totalSteps * 3; // 15 ejercicios en total globales
+            let successRatio = (gameState.totalAnswersCorrect / gameState.totalQuestionsAsked) * 100;
+            if(isNaN(successRatio)) successRatio = 0;
+
+            let icon = '🏆';
+            let title = '';
+            let desc = '';
+
+            if (successRatio >= 100) {
+                icon = '🏆';
+                title = "¡INCREÍBLE!";
+                desc = "Eres un Maestro de la Proporcionalidad. Tu razonamiento matemático es excelente y has descifrado cada patrón espacial.";
+                playSynthSound('victory');
+                triggerConfetti();
+            } else if (successRatio >= 80) {
+                icon = '🌟';
+                title = "¡Muy buen trabajo!";
+                desc = "Estás muy cerca de dominar por completo el tema. Tu velocidad de cálculo es digna de un experto.";
+                playSynthSound('victory');
+                triggerConfetti();
+            } else if (successRatio >= 60) {
+                icon = '👍';
+                title = "¡Buen esfuerzo!";
+                desc = "Con un poco más de práctica regular serás un absoluto campeón en proporcionalidad matemática.";
+                playSynthSound('victory');
+            } else {
+                icon = '💪';
+                title = "¡No te rindas!";
+                desc = "Cada intento fallido hace que tus conexiones neuronales sean más fuertes. ¡Vuelve a la carga soldado!";
+                playSynthSound('defeat');
+            }
+
+            // Inyectar textos correspondientes en los nodos del DOM
+            document.getElementById('resultBadge').innerText = icon;
+            document.getElementById('resultRank').innerText = title;
+            document.getElementById('resultDesc').innerText = desc;
+
+            document.getElementById('statScore').innerText = gameState.score;
+            document.getElementById('statCorrect').innerText = `${gameState.totalAnswersCorrect} de ${gameState.totalQuestionsAsked}`;
+
+            // Selector aleatorio puro de la lista de 20 frases motivacionales creadas
+            let randomFrase = frasesMotivacionales[Math.floor(Math.random() * frasesMotivacionales.length)];
+            document.getElementById('motivationalMessage').innerText = `"${randomFrase}"`;
+        }
+
+        function restartGame() {
+            startGame();
+        }
+    </script>
+</body>
+</html>
