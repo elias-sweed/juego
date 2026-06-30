@@ -738,7 +738,7 @@
             { t: "Marca las alternativas de la lista que NO tienen proporcionalidad:", o: ["Dígitos de tu número telefónico y tu edad", "Consumo de gasolina de un coche estacionado", "Puntaje en un juego y cantidad de parpadeos por minuto", "Kilogramos de alimento para pollos y costo de adquisición"], c: [0, 2] }
         ];
 
-        // FASE 3: Problemas Matemáticos Aplicados (15 Ítems)
+        // FASE 3: Problemas Matemáticos Aplicados (DIFICULTAD AVANZADA - 30 Ítems)
         const poolFase3Problemas = [
             { t: "Si 4 cuadernos del mismo tipo cuestan S/20. ¿Cuánto costarán 10 cuadernos?", o: ["S/40", "S/50", "S/60", "S/80"], c: 1 },
             { t: "8 obreros hacen una obra en 12 días. Si trabajan 16 obreros al mismo ritmo, ¿cuántos días tardarán?", o: ["24 días", "6 días", "12 días", "8 días"], c: 1 },
@@ -754,10 +754,26 @@
             { t: "Cinco grifos tardan 18 minutos en vaciar un tanque. ¿Cuántos minutos tardarán 9 grifos idénticos?", o: ["10 minutos", "8 minutos", "12 minutos", "15 minutos"], c: 0 },
             { t: "Un camión consume 12 galones de diésel cada 120 km. ¿Cuántos galones gastará en un viaje de 300 km?", o: ["24 galones", "30 galones", "28 galones", "35 galones"], c: 1 },
             { t: "Para pintar una pared se usaron 4 galones de pintura cubriendo 24 m². ¿Cuántos galones se requieren para 42 m²?", o: ["6 galones", "7 galones", "8 galones", "9 galones"], c: 1 },
-            { t: "Si 2 camiones idénticos hacen 6 viajes diarios para retirar escombros, ¿cuántos viajes harán 5 camiones?", o: ["12 viajes", "15 viajes", "10 viajes", "18 viajes"], c: 1 }
+            { t: "Si 2 camiones idénticos hacen 6 viajes diarios para retirar escombros, ¿cuántos viajes harán 5 camiones?", o: ["12 viajes", "15 viajes", "10 viajes", "18 viajes"], c: 1 },
+            // PREGUNTAS NUEVAS AVANZADAS
+            { t: "Tres bombas de agua idénticas vacían una piscina en 12 horas. Si una bomba se malogra, ¿cuánto tardarán las 2 bombas restantes?", o: ["8 horas", "18 horas", "24 horas", "16 horas"], c: 1 },
+            { t: "Un tren viaja a 90 km/h y tarda 4 horas en llegar a su destino. Si debido a una tormenta debe viajar a 60 km/h, ¿cuánto tardará?", o: ["2.6 horas", "5 horas", "6 horas", "8 horas"], c: 2 },
+            { t: "Si 2.5 kilogramos de carne cuestan S/45, ¿cuánto costarán exactamente 6 kilogramos?", o: ["S/90", "S/108", "S/120", "S/100"], c: 1 },
+            { t: "Para hacer 4 porciones de un postre se necesitan 150 gramos de azúcar. ¿Cuántos gramos se necesitarán para 10 porciones?", o: ["300 g", "350 g", "375 g", "400 g"], c: 2 },
+            { t: "Una rueda da 4500 vueltas en 15 minutos. ¿Cuántas vueltas dará en 1 hora y media (90 minutos)?", o: ["18000 vueltas", "27000 vueltas", "13500 vueltas", "9000 vueltas"], c: 1 },
+            { t: "12 pintores pintan un edificio escolar en 20 días. ¿Cuántos días tardarán 15 pintores trabajando al mismo ritmo?", o: ["25 días", "16 días", "18 días", "24 días"], c: 1 },
+            { t: "Un agricultor tiene forraje para alimentar a 40 vacas durante 18 días. Si compra 20 vacas más, ¿para cuántos días le alcanzará el forraje?", o: ["12 días", "27 días", "9 días", "15 días"], c: 0 },
+            { t: "Una máquina imprime 42 folletos en 3 minutos. ¿Cuánto tiempo tardará en imprimir 210 folletos?", o: ["10 min", "12 min", "15 min", "18 min"], c: 2 },
+            { t: "Si 5 litros de aceite de oliva cuestan S/42.50, ¿cuánto costarán 12 litros?", o: ["S/102", "S/98", "S/105", "S/112"], c: 0 },
+            { t: "Una obra puede ser terminada por 24 obreros en 15 días. Si se quiere terminar urgentemente en 10 días, ¿cuántos obreros en total se necesitan?", o: ["40 obreros", "30 obreros", "36 obreros", "16 obreros"], c: 2 },
+            { t: "Un caño arroja 18 litros por minuto y llena un tanque en 1.5 horas. Si el caño arrojara 27 litros por minuto, ¿en cuántos minutos se llenaría?", o: ["60 min", "45 min", "90 min", "75 min"], c: 0 },
+            { t: "El precio de un diamante es directamente proporcional a su peso. Si un diamante de 1.2 gramos cuesta S/600, ¿cuánto costará uno de 3.6 gramos?", o: ["S/1200", "S/1500", "S/1800", "S/2400"], c: 2 },
+            { t: "Nueve personas pagan en total S/207 por un menú especial. ¿Cuánto pagarán en total 14 personas por el mismo menú?", o: ["S/322", "S/308", "S/315", "S/288"], c: 0 },
+            { t: "Si 6 hornos industriales consumen 45 balones de gas en un mes. ¿Cuántos balones consumirán 14 hornos idénticos?", o: ["100 balones", "105 balones", "95 balones", "115 balones"], c: 1 },
+            { t: "Un equipo de 8 analistas procesa un lote de datos en 3.5 horas. Si la empresa necesita procesarlo en 2 horas, ¿cuántos analistas en total deben trabajar?", o: ["12 analistas", "10 analistas", "14 analistas", "16 analistas"], c: 2 }
         ];
 
-        // FASE 3: Análisis de Tablas Numéricas (15 Ítems)
+        // FASE 3: Análisis de Tablas Numéricas (DIFICULTAD AVANZADA - 20 Ítems)
         const poolFase3Tablas = [
             { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [2, 4, 6]<br>Y: [10, 20, 30]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 0 },
             { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [2, 4, 8]<br>Y: [20, 10, 5]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 1 },
@@ -773,7 +789,13 @@
             { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [2, 4, 6]<br>Y: [100, 50, 25]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 2 },
             { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [0.5, 1, 2]<br>Y: [4, 8, 16]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 0 },
             { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [10, 5, 2]<br>Y: [4, 8, 20]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 1 },
-            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [5, 6, 7]<br>Y: [25, 30, 36]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 2 }
+            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [5, 6, 7]<br>Y: [25, 30, 36]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 2 },
+            // TABLAS NUEVAS AVANZADAS (Decimales y trampas de suma)
+            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [1.5, 3.0, 4.5]<br>Y: [6, 12, 18]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 0 },
+            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [2, 5, 8]<br>Y: [20, 8, 5]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 1 },
+            { t: "Analiza la tabla y determina la relación de proporcionalidad (¡Cuidado!):<br>X: [10, 15, 20]<br>Y: [25, 30, 35]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 2 },
+            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [0.2, 0.4, 0.8]<br>Y: [100, 50, 25]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 1 },
+            { t: "Analiza la tabla y determina la relación de proporcionalidad:<br>X: [3, 7, 11]<br>Y: [21, 49, 77]", o: ["Directamente Proporcional", "Inversamente Proporcional", "No Proporcional"], c: 0 }
         ];
 
         // Frases Motivacionales para la pantalla final (20 Diferentes)
